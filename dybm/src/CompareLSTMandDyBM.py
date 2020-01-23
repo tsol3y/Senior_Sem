@@ -50,11 +50,11 @@ from pydybm.base.sgd import RMSProp
 from scipy.ndimage.filters import gaussian_filter1d
 from sklearn.metrics import mean_squared_error
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-head = os.path.split(dir_path)[0]
-parent = os.path.dirname(head)
+# dir_path = os.path.dirname(os.path.realpath(__file__))
+# head = os.path.split(dir_path)[0]
+# parent = os.path.dirname(head)
 # load the dataset
-dataframe = pandas.read_csv(parent + '/data/daily-total-sunspot-number.csv',
+dataframe = pandas.read_csv('GOOG-year.csv',
                             usecols=[1], engine='python', skipfooter=3)
 dataset = dataframe.values
 dataset = dataset.astype('float32')
@@ -98,102 +98,102 @@ def create_dataset(dataset, look_back=1):
     return np.array(dataX), np.array(dataY)
 
 
-def learn_KerasRNN(trainX, trainY, testX, testY, modelType):
-    if modelType == "LSTM":
-        print ('********************')
-        print ('Learning with LSTM')
-        print ('********************')
-        saveResults = False
-        # create and fit the LSTM network
-        hidden_no = 10
-        max_epochs = 5
-        model = Sequential()
-        model.add(LSTM(hidden_no, activation='tanh', input_shape=(None, 1)))
-        model.add(Dense(input_dim=hidden_no, units=1,
-                        activation='linear'))
-        model.compile(loss='mse', optimizer='rmsprop')
-        start_time = time.time()
-        model.fit(trainX, trainY, epochs=max_epochs, shuffle=False,
-                  batch_size=1, verbose=2)
-        end_time = time.time() - start_time
-        # Estimate model training performance
-        trainScore = model.evaluate(trainX, trainY, verbose=0)
-        trainScore = math.sqrt(trainScore)
+# def learn_KerasRNN(trainX, trainY, testX, testY, modelType):
+#     if modelType == "LSTM":
+#         print ('********************')
+#         print ('Learning with LSTM')
+#         print ('********************')
+#         saveResults = False
+#         # create and fit the LSTM network
+#         hidden_no = 10
+#         max_epochs = 5
+#         model = Sequential()
+#         model.add(LSTM(hidden_no, activation='tanh', input_shape=(None, 1)))
+#         model.add(Dense(input_dim=hidden_no, units=1,
+#                         activation='linear'))
+#         model.compile(loss='mse', optimizer='rmsprop')
+#         start_time = time.time()
+#         model.fit(trainX, trainY, epochs=max_epochs, shuffle=False,
+#                   batch_size=1, verbose=2)
+#         end_time = time.time() - start_time
+#         # Estimate model training performance
+#         trainScore = model.evaluate(trainX, trainY, verbose=0)
+#         trainScore = math.sqrt(trainScore)
 
-        # trainScore = scaler.inverse_transform(numpy.array([[trainScore]]))
-        print('Mean Train Score LSTM: %.5f RMSE' % (trainScore))
+#         # trainScore = scaler.inverse_transform(numpy.array([[trainScore]]))
+#         print('Mean Train Score LSTM: %.5f RMSE' % (trainScore))
 
-        # Estimate model test performance
-        testScore = model.evaluate(testX, testY, verbose=0)
-        testScore = math.sqrt(testScore)
+#         # Estimate model test performance
+#         testScore = model.evaluate(testX, testY, verbose=0)
+#         testScore = math.sqrt(testScore)
 
-        # testScore = scaler.inverse_transform(numpy.array([[testScore]]))
-        print('Mean Test Score LSTM: %.5f RMSE' % (testScore))
-        print ('Per epoch time to learn: %.5f sec.' % (end_time))
+#         # testScore = scaler.inverse_transform(numpy.array([[testScore]]))
+#         print('Mean Test Score LSTM: %.5f RMSE' % (testScore))
+#         print ('Per epoch time to learn: %.5f sec.' % (end_time))
 
-        if saveResults:
-            filename = "RMSE_LSTM_" + str(hidden_no) + "no_delay" + "_epc" \
-                       + str(max_epochs) + ".xml"
-            out_file = open(filename, "wb")
-            out_file.write('Decay' + '\t' + 'LSTM Train RMSE' + '\t'
-                           + 'LSTM TestRMSE' + '\n')
+#         if saveResults:
+#             filename = "RMSE_LSTM_" + str(hidden_no) + "no_delay" + "_epc" \
+#                        + str(max_epochs) + ".xml"
+#             out_file = open(filename, "wb")
+#             out_file.write('Decay' + '\t' + 'LSTM Train RMSE' + '\t'
+#                            + 'LSTM TestRMSE' + '\n')
 
-            print ('Currently writing to file: %s' % (out_file.name))
+#             print ('Currently writing to file: %s' % (out_file.name))
 
-            out_file.close()
+#             out_file.close()
 
-    elif modelType == "SimpleRNN":
-        print ('************************')
-        print ('Learning with SimpleRNN')
-        print ('************************')
-        saveResults = False
-        # create and fit the LSTM network
-        hidden_no = 10
-        max_epochs = 5
-        model = Sequential()
-        model.add(SimpleRNN(hidden_no,
-                            activation='tanh',
-                            input_shape=(None, 1)))
-        model.add(Dense(input_dim=hidden_no, units=1,
-                        activation='linear'))
-        model.compile(loss='mse', optimizer='rmsprop')
-        start_time = time.time()
-        model.fit(trainX, trainY, epochs=max_epochs, shuffle=False,
-                  batch_size=1, verbose=2)
-        end_time = time.time() - start_time
-        # Estimate model training performance
-        trainScore = model.evaluate(trainX, trainY, verbose=0)
-        trainScore = math.sqrt(trainScore)
+#     elif modelType == "SimpleRNN":
+#         print ('************************')
+#         print ('Learning with SimpleRNN')
+#         print ('************************')
+#         saveResults = False
+#         # create and fit the LSTM network
+#         hidden_no = 10
+#         max_epochs = 5
+#         model = Sequential()
+#         model.add(SimpleRNN(hidden_no,
+#                             activation='tanh',
+#                             input_shape=(None, 1)))
+#         model.add(Dense(input_dim=hidden_no, units=1,
+#                         activation='linear'))
+#         model.compile(loss='mse', optimizer='rmsprop')
+#         start_time = time.time()
+#         model.fit(trainX, trainY, epochs=max_epochs, shuffle=False,
+#                   batch_size=1, verbose=2)
+#         end_time = time.time() - start_time
+#         # Estimate model training performance
+#         trainScore = model.evaluate(trainX, trainY, verbose=0)
+#         trainScore = math.sqrt(trainScore)
 
-        # trainScore = scaler.inverse_transform(numpy.array([[trainScore]]))
-        print('Mean Train Score SimpleRNN: %.5f RMSE' % (trainScore))
+#         # trainScore = scaler.inverse_transform(numpy.array([[trainScore]]))
+#         print('Mean Train Score SimpleRNN: %.5f RMSE' % (trainScore))
 
-        # Estimate model test performance
-        testScore = model.evaluate(testX, testY, verbose=0)
-        testScore = math.sqrt(testScore)
+#         # Estimate model test performance
+#         testScore = model.evaluate(testX, testY, verbose=0)
+#         testScore = math.sqrt(testScore)
 
-        # testScore = scaler.inverse_transform(numpy.array([[testScore]]))
-        print('Mean Test Score SimpleRNN: %.5f RMSE' % (testScore))
-        print ('Per epoch time to learn: %.5f sec.' % (end_time))
-        if saveResults:
-            filename = "RMSE_SimpleRNN_" + str(hidden_no) + "no_delay" \
-                       + "_epc" + str(max_epochs) + ".xml"
-            out_file = open(filename, "wb")
-            out_file.write('Decay' + '\t' + 'SimpleRNN Train RMSE' + '\t'
-                           + 'SimpleRNN TestRMSE' + '\n')
+#         # testScore = scaler.inverse_transform(numpy.array([[testScore]]))
+#         print('Mean Test Score SimpleRNN: %.5f RMSE' % (testScore))
+#         print ('Per epoch time to learn: %.5f sec.' % (end_time))
+#         if saveResults:
+#             filename = "RMSE_SimpleRNN_" + str(hidden_no) + "no_delay" \
+#                        + "_epc" + str(max_epochs) + ".xml"
+#             out_file = open(filename, "wb")
+#             out_file.write('Decay' + '\t' + 'SimpleRNN Train RMSE' + '\t'
+#                            + 'SimpleRNN TestRMSE' + '\n')
 
-            print ('Currently writing to file: %s' % (out_file.name))
+#             print ('Currently writing to file: %s' % (out_file.name))
 
-            out_file.close()
+#             out_file.close()
 
-    # generate predictions for training
-    trainPredict = model.predict(trainX)
-    testPredict = model.predict(testX)
+#     # generate predictions for training
+#     trainPredict = model.predict(trainX)
+#     testPredict = model.predict(testX)
 
-    plotFig = False
+#     plotFig = False
 
-    if(plotFig):
-        plotData(trainPredict, testPredict, dataset)
+#     if(plotFig):
+#         plotData(trainPredict, testPredict, dataset)
 
 
 def plotData(trainPredict, testPredict, dataset):
@@ -222,7 +222,7 @@ def plotData(trainPredict, testPredict, dataset):
     plt.show()
 
 
-def learn_DyBM(trainX, trainY, testX, testY, DyBMmodel):
+def learn_DyBM(trainX, trainY, testX, testY, DyBMmodel, scaler):
 
     plotFig = False
     RNN_dim = 10
@@ -294,22 +294,27 @@ def learn_DyBM(trainX, trainY, testX, testY, DyBMmodel):
             # dybm.init_state()
             result2 = dybm.learn(testX, get_result=True)
             test_rmse = RMSE(testY, result2["prediction"])
-
-            print ('test error: %.5f ' % (test_rmse))
+            Test = scaler.inverse_transform(result2["prediction"])
+            # print(Test, "-----------------")
+            # print ('test error: %.5f ' % (test_rmse))
 
             errs.append(test_rmse)
             train_errs.append(train_rmse)
+        
+        np.savetxt("predictedPrice.csv", scaler.inverse_transform(result2["prediction"]), delimiter= ",")
 
-            error = np.array(errs)
+        
 
-            curr_mean = np.mean(error)
+        #     error = np.array(errs)
 
-            print ('delay = %f decay = %s curr_mean_error = %f' % (delay, decay, curr_mean))
+        #     curr_mean = np.mean(error)
 
-        print ('Mean train error with DyBM: %.5f RMSE'
-               % (np.mean(np.array(train_errs))))
-        print ('Mean test error with DyBM: %.5f RMSE' % (curr_mean))
-        print ('Per epoch time to learn: %.5f sec.' % (end_time))
+        #     print ('delay = %f decay = %s curr_mean_error = %f' % (delay, decay, curr_mean))
+
+        # print ('Mean train error with DyBM: %.5f RMSE'
+        #        % (np.mean(np.array(train_errs))))
+        # print ('Mean test error with DyBM: %.5f RMSE' % (curr_mean))
+        # print ('Per epoch time to learn: %.5f sec.' % (end_time))
 
     if saveResults:
         out_file.write('%s\t%s\t%s\n'
@@ -349,7 +354,7 @@ if __name__ == "__main__":
     print("Test data X shape: ", testX.shape)
     print("Test data Y shape: ", testY.shape)
 
-    learn_DyBM(trainX, trainY, testX, testY, DyBMmodel="RNNGaussian")
+    learn_DyBM(trainX, trainY, testX, testY, DyBMmodel="RNNGaussian", scaler = scaler)
 
-    learn_KerasRNN(trainX, trainY, testX, testY, modelType="LSTM")
+    # learn_KerasRNN(trainX, trainY, testX, testY, modelType="LSTM")
     # learn_KerasRNN(trainX, trainY, testX, testY, modelType="SimpleRNN")
