@@ -60,7 +60,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 # google = pd.read_csv('C:/Github/DS_SeniorSem/GOOG-year.csv')
 google = pd.read_csv('GOOG-year.csv')
-google.head()
+# google.head()
+predicted = pd.read_csv("dybm/src/predictedPrice.csv")
 # %% codecell
 def get_state(data, t, n):
     d = t - n + 1
@@ -70,14 +71,14 @@ def get_state(data, t, n):
         res.append(block[i + 1] - block[i])
     return np.array([res])
 # %% codecell
-close = google.Close.values.tolist()
-train = close[:int(len(close) * 0.7)]
-test = close[int(len(close) * 0.7):]
-get_state(close, 0, 10)
+data = zip(google.Close.values.tolist(), predicted.values.tolist())
+train = data[:int(len(close) * 0.7)]
+test = data[int(len(close) * 0.7):]
+# get_state(close, 0, 10)
 # %% codecell
-get_state(close, 1, 10)
+# get_state(close, 1, 10)
 # %% codecell
-get_state(close, 2, 10)
+# get_state(close, 2, 10)
 # %% codecell
 class Deep_Evolution_Strategy:
     def __init__(
@@ -133,15 +134,15 @@ class Deep_Evolution_Strategy:
 class Model:
     def __init__(self, input_size, layer_size, output_size):
         self.weights = [
-            np.random.randn(input_size, layer_size),
+            np.random.randn(input_size, 2, layer_size),
             np.random.randn(layer_size, output_size),
-            np.random.randn(layer_size, 1),
-            np.random.randn(1, layer_size),
+            np.random.randn(layer_size, 2),
+            np.random.randn(2, layer_size),
         ]
 
     def predict(self, inputs):
         feed = np.dot(inputs, self.weights[0]) + self.weights[-1]
-        decision = np.dot(feed, self.weights[1])
+        decision = np.dot(feed, self.weights[1]) 
         buy = np.dot(feed, self.weights[2])
         return decision, buy
 
@@ -156,11 +157,12 @@ model = Model(window_size, 500, 3)
 # %% codecell
 initial_money = 10000
 starting_money = initial_money
-len_close = len(close) - 1
+# len_close = len(close) - 1
+len_train = len(train) - 1
 weight = model
 skip = 1
 
-state = get_state(close, 0, window_size + 1)
+state = get_state(train, 0, window_size + 1)
 inventory = []
 quantity = 0
 
@@ -173,31 +175,31 @@ def act(model, sequence):
     return np.argmax(decision[0]), int(buy[0])
 
 
-for t in range(0, len_close, skip):
-    action, buy = act(weight, state)
-    next_state = get_state(close, t + 1, window_size + 1)
-    if action == 1 and initial_money >= close[t]:
-        if buy < 0:
-            buy = 1
-        if buy > max_buy:
-            buy_units = max_buy
-        else:
-            buy_units = buy
-        total_buy = buy_units * close[t]
-        initial_money -= total_buy
-        inventory.append(total_buy)
-        quantity += buy_units
-    elif action == 2 and len(inventory) > 0:
-        if quantity > max_sell:
-            sell_units = max_sell
-        else:
-            sell_units = quantity
-        quantity -= sell_units
-        total_sell = sell_units * close[t]
-        initial_money += total_sell
+# for t in range(0, len_train, skip):
+#     action, buy = act(weight, state)
+#     next_state = get_state(train, t + 1, window_size + 1)
+#     if action == 1 and initial_money >= close[t]:
+#         if buy < 0:
+#             buy = 1
+#         if buy > max_buy:
+#             buy_units = max_buy
+#         else:
+#             buy_units = buy
+#         total_buy = buy_units * close[t]
+#         initial_money -= total_buy
+#         inventory.append(total_buy)
+#         quantity += buy_units
+#     elif action == 2 and len(inventory) > 0:
+#         if quantity > max_sell:
+#             sell_units = max_sell
+#         else:
+#             sell_units = quantity
+#         quantity -= sell_units
+#         total_sell = sell_units * close[t]
+#         initial_money += total_sell
 
-    state = next_state
-((initial_money - starting_money) / starting_money) * 100
+#     state = next_state
+# ((initial_money - starting_money) / starting_money) * 100
 # %% codecell
 import time
 

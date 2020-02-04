@@ -55,7 +55,7 @@ from sklearn.metrics import mean_squared_error
 # parent = os.path.dirname(head)
 # load the dataset
 dataframe = pandas.read_csv('GOOG-year.csv',
-                            usecols=[1], engine='python', skipfooter=3)
+                            usecols=[4], engine='python', skipfooter=3)
 dataset = dataframe.values
 dataset = dataset.astype('float32')
 
