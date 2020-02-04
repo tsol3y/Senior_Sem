@@ -7,17 +7,21 @@ from resnet_blocks import *
 from blocks import *
 
 class SnailFewShot(nn.Module):
-    def __init__(self, N, K, task, use_cuda=True):
+    def __init__(self, N, K, use_cuda=True):
         # N-way, K-shot
         super(SnailFewShot, self).__init__()
-        if task == 'omniglot':
-            self.encoder = OmniglotNet()
-            num_channels = 64 + N
-        elif task == 'mini_imagenet':
-            self.encoder = MiniImagenetNet()
-            num_channels = 384 + N
-        else:
-            raise ValueError('Not recognized task value')
+        # if task == 'omniglot':
+        #     self.encoder = OmniglotNet()
+        #     num_channels = 64 + N
+        # elif task == 'mini_imagenet':
+        #     self.encoder = MiniImagenetNet()
+        #     num_channels = 384 + N
+        # else:
+        #     raise ValueError('Not recognized task value')
+
+        num_channels = 1 # We only have one class of data, the sine curve
+        
+
         num_filters = int(math.ceil(math.log(N * K + 1, 2)))
         self.attention1 = AttentionBlock(num_channels, 64, 32)
         num_channels += 32

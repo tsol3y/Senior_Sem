@@ -30,3 +30,6 @@ class SineWaveTask:
     def plot(self, *args, **kwargs):
         x, y = self.test_set(size=100)
         return plt.plot(x.numpy(), y.numpy(), *args, **kwargs)
+
+sine = SineWaveTask()
+sine.training_set(10)
