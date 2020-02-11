@@ -38,6 +38,7 @@ class OmniglotNet(nn.Module):
     '''
     def __init__(self, x_dim=1, hid_dim=64, z_dim=64):
         super(OmniglotNet, self).__init__()
+        # This is the shapes of the data I beleive...
         self.encoder = nn.Sequential(OrderedDict([
             ('block1', conv_block(x_dim, hid_dim)),
             ('block2', conv_block(hid_dim, hid_dim)),
@@ -122,7 +123,7 @@ class MiniImagenetNet(nn.Module):
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(p=0.9)
         self.conv2 = conv(2048, 384, kernel_size=1, padding=0)
-        
+
     def forward(self, x, weights=None):
         if weights is None:
             x = self.block1(x)

@@ -2,6 +2,7 @@
 from utils import init_dataset
 from omniglot_dataset import OmniglotDataset
 from snail import SnailFewShot
+from sine import SineWaveTask
 
 import argparse
 import torch
@@ -69,7 +70,8 @@ def train(opt, tr_dataloader, model, optim, val_dataloader=None):
     best_model_path = os.path.join(opt.exp, 'best_model.pth')
     last_model_path = os.path.join(opt.exp, 'last_model.pth')
 
-    loss_fn = nn.CrossEntropyLoss()
+    # loss_fn = nn.CrossEntropyLoss()
+    loss_fn = nn.MSELoss()
 
     for epoch in range(opt.epochs):
         print('=== Epoch: {} ==='.format(epoch))
@@ -79,17 +81,17 @@ def train(opt, tr_dataloader, model, optim, val_dataloader=None):
         for batch in tqdm(tr_iter):
             optim.zero_grad()
             x, y = batch
-            x, y, last_targets = batch_for_few_shot(opt, x, y)
+            # x, y, last_targets = batch_for_few_shot(opt, x, y)
             model_output = model(x, y)
             last_model = model_output[:, -1, :]
-            loss = loss_fn(last_model, last_targets)
+            loss = loss_fn(last_model, y)
             loss.backward()
             optim.step()
             train_loss.append(loss.item())
-            train_acc.append(get_acc(last_model, last_targets))
+            # train_acc.append(get_acc(last_model, last_targets))
         avg_loss = np.mean(train_loss[-opt.iterations:])
-        avg_acc = np.mean(train_acc[-opt.iterations:])
-        print('Avg Train Loss: {}, Avg Train Acc: {}'.format(avg_loss, avg_acc))
+        # avg_acc = np.mean(train_acc[-opt.iterations:])
+        print('Avg Train Loss: {}'.format(avg_loss))
         if val_dataloader is None:
             continue
         val_iter = iter(val_dataloader)
@@ -101,19 +103,19 @@ def train(opt, tr_dataloader, model, optim, val_dataloader=None):
             last_model = model_output[:, -1, :]
             loss = loss_fn(last_model, last_targets)
             val_loss.append(loss.item())
-            val_acc.append(get_acc(last_model, last_targets))
+            # val_acc.append(get_acc(last_model, last_targets))
         avg_loss = np.mean(val_loss[-opt.iterations:])
-        avg_acc = np.mean(val_acc[-opt.iterations:])
-        postfix = ' (Best)' if avg_acc >= best_acc else ' (Best: {})'.format(
-            best_acc)
-        print('Avg Val Loss: {}, Avg Val Acc: {}{}'.format(
-            avg_loss, avg_acc, postfix))
-        if avg_acc >= best_acc:
-            torch.save(model.state_dict(), best_model_path)
-            best_acc = avg_acc
-            best_state = model.state_dict()
-        for name in ['train_loss', 'train_acc', 'val_loss', 'val_acc']:
-            save_list_to_file(os.path.join(opt.exp, name + '.txt'), locals()[name])
+        # avg_acc = np.mean(val_acc[-opt.iterations:])
+        # postfix = ' (Best)' if avg_acc >= best_acc else ' (Best: {})'.format(
+        #     best_acc)
+        print('Avg Val Loss: {}'.format(
+            avg_loss))
+        # if avg_acc >= best_acc:
+        #     torch.save(model.state_dict(), best_model_path)
+        #     best_acc = avg_acc
+        #     best_state = model.state_dict()
+        # for name in ['train_loss', 'train_acc', 'val_loss', 'val_acc']:
+        #     save_list_to_file(os.path.join(opt.exp, name + '.txt'), locals()[name])
 
     torch.save(model.state_dict(), last_model_path)
 
@@ -144,10 +146,10 @@ def main():
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--iterations', type=int, default=10000)
     parser.add_argument('--dataset', type=str, default='omniglot')
-    parser.add_argument('--num_cls', type=int, default=5)
-    parser.add_argument('--num_samples', type=int, default=1)
+    parser.add_argument('--num_cls', type=int, default=1)
+    parser.add_argument('--num_samples', type=int, default=10)
     parser.add_argument('--lr', type=float, default=0.0001)
-    parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--batch_size', type=int, default=10)
     parser.add_argument('--cuda', action='store_true')
     options = parser.parse_args()
 
@@ -157,8 +159,14 @@ def main():
     if torch.cuda.is_available() and not options.cuda:
         print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
-    tr_dataloader, val_dataloader, trainval_dataloader, test_dataloader = init_dataset(
-        options)
+    # tr_dataloader, val_dataloader, trainval_dataloader, test_dataloader = init_dataset(
+    #     options)
+
+    tr_dataloader = SineWaveTask().generate_dataset(50,10)
+    val_dataloader = SineWaveTask().generate_dataset(20,10)
+    trainval_dataloader = SineWaveTask().generate_dataset(10,10)
+    test_dataloader = SineWaveTask().generate_dataset(5,10)
+
     model = init_model(options)
     optim = torch.optim.Adam(params=model.parameters(), lr=options.lr)
     res = train(opt=options,

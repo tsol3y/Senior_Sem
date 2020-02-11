@@ -20,10 +20,10 @@ class SnailFewShot(nn.Module):
         #     raise ValueError('Not recognized task value')
 
         num_channels = 1 # We only have one class of data, the sine curve
-        
+        # self.encoder = None # TODO: Put the sine data here in the format that is needed
 
         num_filters = int(math.ceil(math.log(N * K + 1, 2)))
-        self.attention1 = AttentionBlock(num_channels, 64, 32)
+        self.attention1 = AttentionBlock(num_channels, 20, 32)
         num_channels += 32
         self.tc1 = TCBlock(num_channels, N * K + 1, 128)
         num_channels += num_filters * 128
@@ -39,15 +39,23 @@ class SnailFewShot(nn.Module):
         self.use_cuda = use_cuda
 
     def forward(self, input, labels):
-        x = self.encoder(input)
-        batch_size = int(labels.size()[0] / (self.N * self.K + 1))
-        last_idxs = [(i + 1) * (self.N * self.K + 1) - 1 for i in range(batch_size)]
+        # This is defining how our network is constructed.
         if self.use_cuda:
-            labels[last_idxs] = torch.Tensor(np.zeros((batch_size, labels.size()[1]))).cuda()
+            x = torch.Tensor(input).cuda()
         else:
-            labels[last_idxs] = torch.Tensor(np.zeros((batch_size, labels.size()[1])))
-        x = torch.cat((x, labels), 1)
-        x = x.view((batch_size, self.N * self.K + 1, -1))
+            x = torch.Tensor(input)
+        # batch_size = int(labels.size()[0] / (self.N * self.K + 1))
+        # last_idxs = [(i + 1) * (self.N * self.K + 1) - 1 for i in range(batch_size)]
+        # if self.use_cuda:
+        #     labels[last_idxs] = torch.Tensor(np.zeros((batch_size, labels.size()[0]))).cuda()
+        # else:
+        #     labels[last_idxs] = torch.Tensor(np.zeros((batch_size, labels.size()[0])))
+        if self.use_cuda:
+            labels = labels.cuda()
+        else:
+            labels = labels
+        x = torch.cat((x, labels), 0)
+        # x = x.view((batch_size, self.N * self.K + 1, -1))
         x = self.attention1(x)
         x = self.tc1(x)
         x = self.attention2(x)

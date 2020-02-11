@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class CasualConv1d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, 
+    def __init__(self, in_channels, out_channels, kernel_size,
                  stride=1, dilation=1, groups=1, bias=True):
         super(CasualConv1d, self).__init__()
         self.dilation = dilation
@@ -31,7 +31,7 @@ class DenseBlock(nn.Module):
         xg = self.casualconv2(input)
         activations = F.tanh(xf) * F.sigmoid(xg) # shape: (N, filters, T)
         return torch.cat((input, activations), dim=1)
-        
+
 class TCBlock(nn.Module):
     def __init__(self, in_channels, seq_length, filters):
         super(TCBlock, self).__init__()
@@ -56,7 +56,7 @@ class AttentionBlock(nn.Module):
     def forward(self, input):
         # input is dim (N, T, in_channels) where N is the batch_size, and T is
         # the sequence length
-        mask = np.array([[1 if i>j else 0 for i in range(input.shape[1])] for j in range(input.shape[1])])
+        mask = np.array([[1 if i>j else 0 for i in range(input.shape[0])] for j in range(input.shape[0])])
         mask = torch.ByteTensor(mask).cuda()
 
         #import pdb; pdb.set_trace()

@@ -31,5 +31,22 @@ class SineWaveTask:
         x, y = self.test_set(size=100)
         return plt.plot(x.numpy(), y.numpy(), *args, **kwargs)
 
+    def generate_dataset(self, num_curves, size):
+        curves = []
+        for i in range(num_curves):
+            curves.append(self.training_set(size))
+
+        return curves
+
+
 sine = SineWaveTask()
-sine.training_set(10)
+x = sine.training_set(10)
+y = sine.test_set(10)
+x[1].size()
+
+x
+x,y = x
+x
+y
+
+sine.generate_dataset(10,10)
