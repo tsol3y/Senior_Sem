@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-google = pd.read_csv("C:/Users/tsol3y/Spring_2020/Senior_Sem/GOOG.csv")
+google = pd.read_csv("dybm/src/GOOG-year.csv")
 google.head()
 
 

@@ -59,7 +59,7 @@ import matplotlib.pyplot as plt
 # %% codecell
 import pandas as pd
 # google = pd.read_csv('C:/Github/DS_SeniorSem/GOOG-year.csv')
-google = pd.read_csv('GOOG-year.csv')
+google = pd.read_csv("dybm/src/GOOG-year.csv")
 google.head()
 # %% codecell
 def get_state(data, t, n):
@@ -70,14 +70,14 @@ def get_state(data, t, n):
         res.append(block[i + 1] - block[i])
     return np.array([res])
 # %% codecell
-close = google.Close.values.tolist()
+close = google.Predicted.values.tolist()
 train = close[:int(len(close) * 0.7)]
 test = close[int(len(close) * 0.7):]
-get_state(close, 0, 10)
-# %% codecell
-get_state(close, 1, 10)
-# %% codecell
-get_state(close, 2, 10)
+# get_state(close, 0, 10)
+# # %% codecell
+# get_state(close, 1, 10)
+# # %% codecell
+# get_state(close, 2, 10)
 # %% codecell
 class Deep_Evolution_Strategy:
     def __init__(
