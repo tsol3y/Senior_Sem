@@ -1,67 +1,11 @@
-# %% codecell
+
 import numpy as np
 import matplotlib.pyplot as plt
-# import seaborn as sns
-# sns.set()
-# # %% codecell
-# plt.figure(figsize = (10, 5))
-# bins = np.linspace(-10, 10, 100)
 
-# solution = np.random.randn(100)
-# w = np.random.randn(100)
-
-# plt.hist(solution, bins, alpha = 0.5, label = 'solution', color = 'r')
-# plt.hist(w, bins, alpha = 0.5, label = 'random', color = 'y')
-# plt.legend()
-# plt.show()
-# # %% codecell
-# def f(w):
-#     return -np.sum(np.square(solution - w))
-
-
-# npop = 50
-# sigma = 0.1
-# alpha = 0.001
-
-# for i in range(5000):
-
-#     if (i + 1) % 1000 == 0:
-#         print(
-#             'iter %d. w: %s, solution: %s, reward: %f'
-#             % (i + 1, str(w[-1]), str(solution[-1]), f(w))
-#         )
-#     N = np.random.randn(npop, 100)
-#     R = np.zeros(npop)
-#     for j in range(npop):
-#         w_try = w + sigma * N[j]
-#         R[j] = f(w_try)
-
-#     A = (R - np.mean(R)) / np.std(R)
-#     w = w + alpha / (npop * sigma) * np.dot(N.T, A)
-# # %% codecell
-# '''
-# I want to compare my first two individuals with my real w
-# '''
-# plt.figure(figsize=(10,5))
-
-# sigma = 0.1
-# N = np.random.randn(npop, 100)
-# individuals = []
-# for j in range(2):
-#     individuals.append(w + sigma * N[j])
-
-
-# plt.hist(w, bins, alpha=0.5, label='w',color='r')
-# plt.hist(individuals[0], bins, alpha=0.5, label='individual 1')
-# plt.hist(individuals[1], bins, alpha=0.5, label='individual 2')
-# plt.legend()
-# plt.show()
-# %% codecell
 import pandas as pd
 # google = pd.read_csv('C:/Github/DS_SeniorSem/GOOG-year.csv')
 google = pd.read_csv("dybm/src/GOOG-year.csv")
 google.head()
-# %% codecell
 def get_state(data, t, n):
     d = t - n + 1
     block = data[d : t + 1] if d >= 0 else -d * [data[0]] + data[: t + 1]
@@ -69,16 +13,11 @@ def get_state(data, t, n):
     for i in range(n - 1):
         res.append(block[i + 1] - block[i])
     return np.array([res])
-# %% codecell
 close = google.Predicted.values.tolist()
+close = [x for x in close if str(x) != 'nan']
 train = close[:int(len(close) * 0.7)]
 test = close[int(len(close) * 0.7):]
-# get_state(close, 0, 10)
-# # %% codecell
-# get_state(close, 1, 10)
-# # %% codecell
-# get_state(close, 2, 10)
-# %% codecell
+
 class Deep_Evolution_Strategy:
     def __init__(
         self, weights, reward_function, population_size, sigma, learning_rate
@@ -129,7 +68,7 @@ class Deep_Evolution_Strategy:
                     % (i + 1, self.reward_function(self.weights))
                 )
         print('time taken to train:', time.time() - lasttime, 'seconds')
-# %% codecell
+
 class Model:
     def __init__(self, input_size, layer_size, output_size):
         self.weights = [
@@ -150,22 +89,21 @@ class Model:
 
     def set_weights(self, weights):
         self.weights = weights
-# %% codecell
+
 window_size = 30
-model = Model(window_size, 500, 3)
-# %% codecell
-initial_money = 10000
-starting_money = initial_money
-len_close = len(close) - 1
-weight = model
-skip = 1
+# model = Model(window_size, 500, 3)
+# initial_money = 10000
+# starting_money = initial_money
+# len_close = len(close) - 1
+# weight = model
+# skip = 1
 
-state = get_state(close, 0, window_size + 1)
-inventory = []
-quantity = 0
+# state = get_state(close, 0, window_size + 1)
+# inventory = []
+# quantity = 0
 
-max_buy = 5
-max_sell = 5
+# max_buy = 5
+# max_sell = 5
 
 
 def act(model, sequence):
@@ -173,32 +111,31 @@ def act(model, sequence):
     return np.argmax(decision[0]), int(buy[0])
 
 
-for t in range(0, len_close, skip):
-    action, buy = act(weight, state)
-    next_state = get_state(close, t + 1, window_size + 1)
-    if action == 1 and initial_money >= close[t]:
-        if buy < 0:
-            buy = 1
-        if buy > max_buy:
-            buy_units = max_buy
-        else:
-            buy_units = buy
-        total_buy = buy_units * close[t]
-        initial_money -= total_buy
-        inventory.append(total_buy)
-        quantity += buy_units
-    elif action == 2 and len(inventory) > 0:
-        if quantity > max_sell:
-            sell_units = max_sell
-        else:
-            sell_units = quantity
-        quantity -= sell_units
-        total_sell = sell_units * close[t]
-        initial_money += total_sell
+# for t in range(0, len_close, skip):
+#     action, buy = act(weight, state)
+#     next_state = get_state(close, t + 1, window_size + 1)
+#     if action == 1 and initial_money >= close[t]:
+#         if buy < 0:
+#             buy = 1
+#         if buy > max_buy:
+#             buy_units = max_buy
+#         else:
+#             buy_units = buy
+#         total_buy = buy_units * close[t]
+#         initial_money -= total_buy
+#         inventory.append(total_buy)
+#         quantity += buy_units
+#     elif action == 2 and len(inventory) > 0:
+#         if quantity > max_sell:
+#             sell_units = max_sell
+#         else:
+#             sell_units = quantity
+#         quantity -= sell_units
+#         total_sell = sell_units * close[t]
+#         initial_money += total_sell
 
-    state = next_state
-((initial_money - starting_money) / starting_money) * 100
-# %% codecell
+#     state = next_state
+# ((initial_money - starting_money) / starting_money) * 100
 import time
 
 
@@ -334,7 +271,6 @@ class Agent:
         )
         plt.legend()
         plt.show()
-# %% codecell
 model = Model(input_size = window_size, layer_size = 500, output_size = 3)
 agent = Agent(
     model = model,
@@ -346,8 +282,5 @@ agent = Agent(
     skip = 1,
     test = test
 )
-# %% codecell
 agent.fit(iterations = 5, checkpoint = 10)
-# %% codecell
 agent.buy()
-# %% codecell
