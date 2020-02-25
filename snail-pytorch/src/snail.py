@@ -23,7 +23,7 @@ class SnailFewShot(nn.Module):
         # self.encoder = None # TODO: Put the sine data here in the format that is needed
 
         num_filters = int(math.ceil(math.log(N * K + 1, 2)))
-        self.attention1 = AttentionBlock(num_channels, 20, 32)
+        self.attention1 = `AttentionBlock`(num_channels, 20, 32)
         num_channels += 32
         self.tc1 = TCBlock(num_channels, N * K + 1, 128)
         num_channels += num_filters * 128
