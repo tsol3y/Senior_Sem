@@ -1,7 +1,13 @@
 # %% codecell
+import sys
+import warnings
+if not sys.warnoptions:
+    warnings.simplefilter('ignore')
+
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+
 import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set()
@@ -153,8 +159,12 @@ class Agent:
                                                     embedded_size,
                                                     activation = tf.nn.relu)
 
+        print(np.shape(encoder_embedded))
+        print(np.shape(encoder_embedded[-1]))
+        print(self.state_size)
         # Reshape the encoder to the state size
-        encoded = tf.layers.dense(encoder_embedded[-1], self.state_size)
+        encoded = tf.layers.dense(encoder_embedded, self.state_size)
+        print(np.shape(encoded))
 
         with tf.variable_scope('curiosity_model'):
             action = tf.reshape(self.ACTION, (-1,1))
@@ -235,6 +245,12 @@ class Agent:
         actions = np.array([a[1] for a in replay])
         rewards = np.array([a[2] for a in replay])
         new_states = np.array([a[3] for a in replay])
+
+        print(np.shape(states))
+        print(np.shape(actions))
+        print(np.shape(rewards))
+        print(np.shape(new_states))
+
         if (self.T_COPY + 1) % self.COPY == 0:
             self.sess.run(self.target_replace_op)
 
