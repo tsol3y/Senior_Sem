@@ -30,6 +30,8 @@ def batchnorm(input, weight=None, bias=None, running_mean=None, running_var=None
     running_mean = torch.zeros(size).cuda()
     running_var = torch.ones(size).cuda()
     return F.batch_norm(input, running_mean, running_var, weight, bias, training, momentum, eps)
+# https://pytorch.org/docs/stable/nn.functional.html
+# class SineNet(nn.Module):
 
 class OmniglotNet(nn.Module):
     '''
