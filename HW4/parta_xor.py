@@ -46,11 +46,11 @@ class NN:
 
     # predict output according to the given inputs
     def update(self, inputs):
-        self.a1 = np.vstack(([1.0, 1.0], inputs))
+        self.a1 = np.append(inputs, 1.0)
 
         # hidden activations
         self.z2 = np.dot(self.w1, self.a1)
-        self.a2 = np.vstack(([1.0], sigmoid(self.z2)))
+        self.a2 = np.append(sigmoid(self.z2), 1.0)  #np.vstack(([1.0], sigmoid(self.z2)))
 
         # output activations
         self.z3 = np.dot(self.w2, self.a2)
@@ -85,10 +85,10 @@ class NN:
         # calculate error terms for output
         delta3 = self.a3 - targets
         # do not forget to skip the first column which is for bias and should not be included
-        delta2 = (np.dot(self.w2.T, delta3))[1:] * dsigmoid(self.z2)
+        delta2 = (np.dot(self.w2.T, delta3))[:-1] * dsigmoid(self.z2)
         #accumulate the gradient from all the train samples 
-        self.Delta1 = self.Delta1 + np.dot(delta2, self.a1.T)
-        self.Delta2 = self.Delta2 + np.dot(delta3, self.a2.T)
+        self.Delta1 = self.Delta1 + np.dot(delta2.reshape(delta2.shape[0], 1), self.a1.T.reshape(1,self.a1.T.shape[0]))
+        self.Delta2 = self.Delta2 + np.dot(delta3.reshape(delta3.shape[0], 1), self.a2.T.reshape(1,self.a2.T.shape[0]))
 
         # calculate error, mse was used, just to show the minimization, 
         # if use other optimize method, should use cost function 
@@ -103,8 +103,8 @@ class NN:
         ac = 1
         for p in patterns:
             predict = self.update(p[0])
-            print(1 + np.argmax(p[1]), 'vs.', 1 + np.argmax(predict))
-            if np.argmax(p[1]) == np.argmax(predict):
+            #print(1 + np.argmax(p[1]), 'vs.', 1 + np.argmax(predict))
+            if p[1] == np.argmax(predict):
                 ac += 1
         print("training set accuracy: {0} %".format(100.0 * ac / len(patterns)))
 
@@ -118,11 +118,11 @@ class NN:
                 self.update(inputs)
                 error += self.backPropagate(targets)
             self.weights_update(Lambda, len(patterns))
-            if i % 50 == 0:
+            if i % 500 == 0:
                 print('error: {0}'.format(error))
 
 X = np.array([[0,0],[0,1],[1,0],[1,1]])
-y = np.array([0,1,1,0])
+y = np.array([[0],[1],[1],[0]])
 print (X.shape, y.shape)
 
 def handwritten_visualize(X, ncol, nrow):
@@ -157,13 +157,13 @@ def hw_demo(Xd, yd):
         y =yd[idx]  # np.eye(10)[yd[idx]-1].reshape((-1, 1))
         test_set.append([x, y])
     # create a network with two input, two hidden, and one output nodes
-    n = NN(4, 8, 2)
+    n = NN(2, 8, 2)
     
     # train it with some patterns
     dt_st = datetime.datetime.now()
     print ("train start at: {0}".format(dt_st))
     
-    n.train(train_set, 40, 10.1)
+    n.train(train_set, 2000, 10.1)
     
     dt_end = datetime.datetime.now()
     print ("train end at: {0}".format(dt_end))
