@@ -42,11 +42,11 @@ class SineWaveTask:
 sine = SineWaveTask()
 x = sine.training_set(10)
 y = sine.test_set(10)
-x[1].size()
+# x[1].size()
 
-x
-x,y = x
-x
-y
+# x
+# x,y = x
+# x
+# y
 
 sine.generate_dataset(10,10)
