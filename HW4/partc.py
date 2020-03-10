@@ -11,6 +11,19 @@ import datetime
 
 def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x)) # exp function provided by numpy can support vector operation by default
+
+def sinh(x):
+    return (np.exp(x) - np.exp(-x)) / 2
+
+def cosh(x):
+    return (np.exp(x) + np.exp(-x)) / 2
+
+def tanh(x):
+    return sinh(x) / cosh(x)
+
+def dtanh(x):
+    return (cosh(x)**2 - sinh(x)**2) / cosh(x)**2
+
     
 # derivative of our sigmoid function, in terms of the output (i.e. y)
 def dsigmoid(y):
@@ -54,11 +67,16 @@ class NN:
 
         # hidden activations
         self.z2 = np.dot(self.w1, self.a1)
-        self.a2 = np.append(sigmoid(self.z2), 1.0)  #np.vstack(([1.0], sigmoid(self.z2)))
+        
+        self.a2 = np.append(tanh(self.z2), 1.0)
+        #self.a2 = np.append(sigmoid(self.z2), 1.0)  #np.vstack(([1.0], sigmoid(self.z2)))
 
+        #print(self.z3)
         # output activations
         self.z3 = np.dot(self.w2, self.a2)
-        self.a3 = sigmoid(self.z3)
+        
+        self.a3 = tanh(self.z3)
+        #self.a3 = sigmoid(self.z3)
         return self.a3
 
     # after each iteration, we update the weights, 
@@ -89,7 +107,7 @@ class NN:
         # calculate error terms for output
         delta3 = self.a3 - targets
         # do not forget to skip the first column which is for bias and should not be included
-        delta2 = (np.dot(self.w2.T, delta3))[:-1] * dsigmoid(self.z2)
+        delta2 = (np.dot(self.w2.T, delta3))[:-1] * dtanh(self.z2)#dsigmoid(self.z2)
         #accumulate the gradient from all the train samples 
         self.Delta1 = self.Delta1 + np.dot(delta2.reshape(delta2.shape[0], 1), self.a1.T.reshape(1,self.a1.T.shape[0]))
         self.Delta2 = self.Delta2 + np.dot(delta3.reshape(delta3.shape[0], 1), self.a2.T.reshape(1,self.a2.T.shape[0]))
@@ -104,13 +122,17 @@ class NN:
 
     # to test a trained ANN
     def test(self, patterns):
-        ac = 1
+        accs = []
         for p in patterns:
             predict = self.update(p[0])
-            print(1 + np.argmax(p[1]), 'vs.', 1 + np.argmax(predict))
-            if np.argmax(p[1]) == np.argmax(predict):
-                ac += 1
-        print("training set accuracy: {0} %".format(100.0 * ac / len(patterns)))
+            #print(1 + np.argmax(p[1]), 'vs.', 1 + np.argmax(predict))
+            #if np.argmax(p[1]) == np.argmax(predict):
+            #    ac += 1
+            print(p)
+            print(predict)
+            acc = 1 - ((p[1] - predict) / (p[1]))
+            accs.append(acc)
+        print("training set accuracy: {0} %".format(100 * np.mean(accs)))
 
     # train the model by using gradient descent optimization algorithm
     def train(self, patterns, iterations, Lambda):
@@ -122,11 +144,11 @@ class NN:
                 self.update(inputs)
                 error += self.backPropagate(targets)
             self.weights_update(Lambda, len(patterns))
-            if i % 50 == 0:
+            if i % 500 == 0:
                 print('error: {0}'.format(error))
 
 X = np.array([[0.1],[0.2],[0.3],[0.4]])
-y = np.array([[0.2],[0.4],[0.6],[0.8]])
+y = np.array([[-2],[-4],[-6],[-8]])
 print (X.shape, y.shape)
 
 def handwritten_visualize(X, ncol, nrow):
@@ -167,7 +189,7 @@ def hw_demo(Xd, yd):
     dt_st = datetime.datetime.now()
     print ("train start at: {0}".format(dt_st))
     
-    n.train(train_set, 40, 10.1)
+    n.train(train_set, 4000, 0.1)
     
     dt_end = datetime.datetime.now()
     print ("train end at: {0}".format(dt_end))
