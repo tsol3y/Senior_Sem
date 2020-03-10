@@ -10,7 +10,7 @@ import math
 import datetime
 
 def sigmoid(x):
-    return 1.0 / (1.0 + np.exp(-x)) # exp function provided by numpy can support vector operation by default
+    return 1.0 / (1.0 + np.exp(-x) + 0.001) # exp function provided by numpy can support vector operation by default
     
 # derivative of our sigmoid function, in terms of the output (i.e. y)
 def dsigmoid(y):
@@ -110,9 +110,11 @@ class NN:
             #print(1 + np.argmax(p[1]), 'vs.', 1 + np.argmax(predict))
             #if np.argmax(p[1]) == np.argmax(predict):
             #    ac += 1
-            acc = 1 - ((p[1] - predict) / p[1])  + 0.0000000001
+            #print(p)
+            #print(predict)
+            acc = 1 - ((p[1] - predict) / (p[1]+0.0001))
             accs.append(acc)
-        print("training set accuracy: {0} %".format(np.mean(accs)))
+        print("training set accuracy: {0} %".format(100 * np.mean(accs)))
 
     # train the model by using gradient descent optimization algorithm
     def train(self, patterns, iterations, Lambda):
@@ -169,7 +171,7 @@ def hw_demo(Xd, yd):
     dt_st = datetime.datetime.now()
     print ("train start at: {0}".format(dt_st))
     
-    n.train(train_set, 4000, 10.1)
+    n.train(train_set, 4000, 0.1)
     
     dt_end = datetime.datetime.now()
     print ("train end at: {0}".format(dt_end))

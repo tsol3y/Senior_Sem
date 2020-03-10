@@ -163,7 +163,7 @@ def hw_demo(Xd, yd):
     dt_st = datetime.datetime.now()
     print ("train start at: {0}".format(dt_st))
     
-    n.train(train_set, 2000, 10.1)
+    n.train(train_set, 20000, 0.1)
     
     dt_end = datetime.datetime.now()
     print ("train end at: {0}".format(dt_end))
