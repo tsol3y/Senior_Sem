@@ -1,7 +1,4 @@
 
-
-
-
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
@@ -13,17 +10,34 @@ def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x)) # exp function provided by numpy can support vector operation by default
 
 def sinh(x):
+    # if np.inf in np.exp(x) or -np.inf in np.exp(x):
+    #     return 0
+    # else:
     return (np.exp(x) - np.exp(-x)) / 2
 
 def cosh(x):
+    # if np.inf in np.exp(x) or -np.inf in np.exp(x):
+    #     return 0
+    # else:
     return (np.exp(x) + np.exp(-x)) / 2
 
 def tanh(x):
-    return sinh(x) / cosh(x)
+    print("sinh:", sinh(x))
+    print("cosh:", cosh(x))
+    return sinh(x) / (cosh(x) + 0.001)
 
 def dtanh(x):
-    return (cosh(x)**2 - sinh(x)**2) / cosh(x)**2
+    return (cosh(x)**2 - sinh(x)**2) / (cosh(x)**2 + 0.001)
 
+def minMaxScaler(min, max):
+    def scaler(x):
+        for i in range(len(x)):
+            x[i] = x[i] * (max - min) + min
+            return x
+    return scaler
+
+scaler = minMaxScaler(-10, 10) # Instead of using a scaler like this we should add one linear layer as the output layer,
+                               # so it can cover all the possible real numbers
     
 # derivative of our sigmoid function, in terms of the output (i.e. y)
 def dsigmoid(y):
@@ -68,15 +82,18 @@ class NN:
         # hidden activations
         self.z2 = np.dot(self.w1, self.a1)
         
-        self.a2 = np.append(tanh(self.z2), 1.0)
-        #self.a2 = np.append(sigmoid(self.z2), 1.0)  #np.vstack(([1.0], sigmoid(self.z2)))
+        #print("z2:", self.z2)
+        #self.a2 = np.append(tanh(self.z2), 1.0)
+        self.a2 = np.append(sigmoid(self.z2), 1.0)  #np.vstack(([1.0], sigmoid(self.z2)))
 
-        #print(self.z3)
+        #print("z3:", self.z3)
         # output activations
+        #print("w2:", self.w2)
+        #print("a2:", self.a2)
         self.z3 = np.dot(self.w2, self.a2)
         
-        self.a3 = tanh(self.z3)
-        #self.a3 = sigmoid(self.z3)
+        #self.a3 = tanh(self.z3)
+        self.a3 = sigmoid(self.z3)
         return self.a3
 
     # after each iteration, we update the weights, 
@@ -107,7 +124,7 @@ class NN:
         # calculate error terms for output
         delta3 = self.a3 - targets
         # do not forget to skip the first column which is for bias and should not be included
-        delta2 = (np.dot(self.w2.T, delta3))[:-1] * dtanh(self.z2)#dsigmoid(self.z2)
+        delta2 = (np.dot(self.w2.T, delta3))[:-1] * dsigmoid(self.z2) #dtanh(self.z2)
         #accumulate the gradient from all the train samples 
         self.Delta1 = self.Delta1 + np.dot(delta2.reshape(delta2.shape[0], 1), self.a1.T.reshape(1,self.a1.T.shape[0]))
         self.Delta2 = self.Delta2 + np.dot(delta3.reshape(delta3.shape[0], 1), self.a2.T.reshape(1,self.a2.T.shape[0]))
@@ -128,8 +145,8 @@ class NN:
             #print(1 + np.argmax(p[1]), 'vs.', 1 + np.argmax(predict))
             #if np.argmax(p[1]) == np.argmax(predict):
             #    ac += 1
-            print(p)
-            print(predict)
+            print("actual:", p)
+            print("predict:", predict)
             acc = 1 - ((p[1] - predict) / (p[1]))
             accs.append(acc)
         print("training set accuracy: {0} %".format(100 * np.mean(accs)))
@@ -176,7 +193,7 @@ def hw_demo(Xd, yd):
 
         train_set.append([x, y])
 
-    # randomly choose some samles to test trained model
+    # randomly choose some samples to test trained model
     for i in range(test_size):
         idx = int(np.random.rand() * len(Xd))
         x = Xd[idx] #.reshape((-1,1))
@@ -189,7 +206,7 @@ def hw_demo(Xd, yd):
     dt_st = datetime.datetime.now()
     print ("train start at: {0}".format(dt_st))
     
-    n.train(train_set, 4000, 0.1)
+    n.train(train_set, 400, 0.1)
     
     dt_end = datetime.datetime.now()
     print ("train end at: {0}".format(dt_end))
