@@ -8,6 +8,7 @@ import pandas as pd
 
 import gym
 import gym.spaces
+import gym_exchange
 import numpy as np
 from tqdm import tqdm
 
