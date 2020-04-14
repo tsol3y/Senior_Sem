@@ -158,12 +158,16 @@ class Agent:
                 encoder_embedded = pointwise_feedforward(encoder_embedded,
                                                     embedded_size,
                                                     activation = tf.nn.relu)
+            print("done")
+
 
         print(np.shape(encoder_embedded))
         print(np.shape(encoder_embedded[-1]))
-        print(self.state_size)
+        print(np.shape(self.state_size))
+
+        # tf.reshape(encoder_embedded,self.state_size)
         # Reshape the encoder to the state size
-        encoded = tf.layers.dense(encoder_embedded, self.state_size)
+        encoded = tf.layers.dense(encoder_embedded[-1], self.state_size)
         print(np.shape(encoded))
 
         with tf.variable_scope('curiosity_model'):
