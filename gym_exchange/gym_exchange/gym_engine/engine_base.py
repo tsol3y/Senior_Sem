@@ -45,6 +45,7 @@ class EngineBase:
 
     def moves_available(self):
         raise NotImplementedError
+        # return 5
 
     def step(self, actions):
         if not iterable(actions): actions = [actions]
@@ -69,4 +70,3 @@ class EngineBase:
 
     def _data_valid(self):
         raise NotImplementedError
-
