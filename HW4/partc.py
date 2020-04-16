@@ -22,8 +22,8 @@ def cosh(x):
     return (np.exp(x) + np.exp(-x)) / 2
 
 def tanh(x):
-    print("sinh:", sinh(x))
-    print("cosh:", cosh(x))
+    #print("sinh:", sinh(x))
+    #print("cosh:", cosh(x))
     return sinh(x) / (cosh(x) + 0.001)
 
 def dtanh(x):
@@ -86,12 +86,13 @@ class NN:
         #self.a2 = np.append(tanh(self.z2), 1.0)
         self.a2 = np.append(sigmoid(self.z2), 1.0)  #np.vstack(([1.0], sigmoid(self.z2)))
 
+        self.z3 = np.dot(self.w2, self.a2)
+        #print("z2:", self.z2)
         #print("z3:", self.z3)
         # output activations
         #print("w2:", self.w2)
         #print("a2:", self.a2)
-        self.z3 = np.dot(self.w2, self.a2)
-        
+
         #self.a3 = tanh(self.z3)
         self.a3 = sigmoid(self.z3)
         return self.a3
