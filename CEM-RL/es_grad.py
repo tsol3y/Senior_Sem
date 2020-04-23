@@ -7,8 +7,13 @@ import torch.nn.functional as F
 import pandas as pd
 
 import gym
-import gym.spaces
-import gym_exchange
+# import gym.spaces
+# import gym_exchange
+
+from stable_baselines.common.vec_env import DummyVecEnv
+from StockTrading.env.StockTradingEnv import StockTradingEnv
+
+
 import numpy as np
 from tqdm import tqdm
 
@@ -359,7 +364,12 @@ if __name__ == "__main__":
             file.write("{} = {}\n".format(key, value))
 
     # environment
-    env = gym.make(args.env)
+    # env = gym.make(args.env)
+
+    df = pd.read_csv('StockTrading/data/AAPL.csv')
+    df = df.sort_values('Date')
+    env = DummyVecEnv([lambda: StockTradingEnv(df)])
+
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0]
     max_action = int(env.action_space.high[0])
