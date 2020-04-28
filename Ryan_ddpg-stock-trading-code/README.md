@@ -1,7 +1,24 @@
 # Both DDPG and Meta-Critic are running!
 
+## Erik's Notes
+
+I have gotten the code to run and have saved all of the dependencies in ddpg.yaml. You can create a new conda environment that copies the one that I used to get this code running by:
+
+```
+conda env create -f ddpg_env.yaml
+```
+
+This will install all of the correct versions of the packages required to run this code.
+
+You will have to install torch separately however. I used torch 1.5.0, and you can install that using:
+```
+pip install torch==1.5.0+cpu torchvision==0.6.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
+```
+
+You may run into an issue installing tables. For tables to work on windows, you need Visual Studio C++ build tools. If you do not already have that installed, you can install that from here: https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=BuildTools&rel=16
+
 ## DDPG is running!
-These are a couple package versions that are necessary for DDPG to run. Checkout freeze.txt to see my packages and their versions. Those are just all of my pip packages, so many are irrelevant, but use it as a reference. Just some notable packages that I remember that I've had to download or change versions on are: 
+These are a couple package versions that are necessary for DDPG to run. Checkout freeze.txt to see my packages and their versions. Those are just all of my pip packages, so many are irrelevant, but use it as a reference. Just some notable packages that I remember that I've had to download or change versions on are:
 1. gym (make sure you have my version of Gym in the freeze)
 2. seaborn (make sure you have my version of seaborn in the freeze)
 3. cvxopt
@@ -11,13 +28,17 @@ These are a couple package versions that are necessary for DDPG to run. Checkout
 7. statsmodels
 8. tables
 
+```
+pip install gym==0.9.3 seaborn==0.8 cvxopt==1.2.5 h5py==2.9.0 pandas==0.25.1 pandas-datareader==0.8.1 scikit-image==0.16.2 statsmodels==0.10.1 tables==3.6.1
+```
+
 Also, as you run each cell in jupyter notebook, just install the modules it says you are missing using pip install. For one of them you may need to use:
 ```
 $>pip install --user packageNameHere
 ```
-since a package will try to download onto protected parts of your hardrive. --user tells pip to install the package under just your user account. 
+since a package will try to download onto protected parts of your hardrive. --user tells pip to install the package under just your user account.
 
-To give an idea of what is in the ddpg-stock-trading-code folder now to get the code to work, I've added the DeepRL and UniversalPortfolios repositories since there are many dependencies this ddpg repository requires in those. I've also edited some of the import paths and even code in the repositories to get it all to work. 
+To give an idea of what is in the ddpg-stock-trading-code folder now to get the code to work, I've added the DeepRL and UniversalPortfolios repositories since there are many dependencies this ddpg repository requires in those. I've also edited some of the import paths and even code in the repositories to get it all to work.
 
 **A really important note to save some time!!**  
 Instructions on running a successful test for pytorch-deeprl-DDPG-EIIE.ipynb:
@@ -112,7 +133,7 @@ Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c6
 
 ## Versioning
 
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags). 
+We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags).
 
 ## Authors
 
@@ -129,4 +150,3 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 * Hat tip to anyone whose code was used
 * Inspiration
 * etc
-
