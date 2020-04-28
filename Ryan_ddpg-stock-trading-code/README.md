@@ -17,6 +17,15 @@ pip install torch==1.5.0+cpu torchvision==0.6.0+cpu -f https://download.pytorch.
 
 You may run into an issue installing tables. For tables to work on windows, you need Visual Studio C++ build tools. If you do not already have that installed, you can install that from here: https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=BuildTools&rel=16
 
+Lastly, to register the environment as a jupyter notebook kernel so it shows up you run:
+
+```
+$ conda activate cenv
+(cenv)$ conda install ipykernel
+(cenv)$ ipython kernel install --user --name=<any_name_for_kernel>
+(cenv)$ conda deactivate
+```
+
 ## DDPG is running!
 These are a couple package versions that are necessary for DDPG to run. Checkout freeze.txt to see my packages and their versions. Those are just all of my pip packages, so many are irrelevant, but use it as a reference. Just some notable packages that I remember that I've had to download or change versions on are:
 1. gym (make sure you have my version of Gym in the freeze)
