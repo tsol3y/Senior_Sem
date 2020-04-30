@@ -3,6 +3,8 @@
 # %%
 from IPython import get_ipython
 
+from ES import sepCEM, Control
+
 # %% [markdown]
 # This notebook is a little easier for beginners because it uses pytorch. You need to clone a repo to get it working:
 # 
@@ -27,7 +29,7 @@ from IPython import get_ipython
 
 # %%
 # plotting
-get_ipython().run_line_magic('matplotlib', 'notebook')
+# get_ipython().run_line_magic('matplotlib', 'notebook')
 from matplotlib import pyplot as plt
 import seaborn as sns
 plt.style.use('ggplot')
@@ -44,6 +46,9 @@ import tempfile
 import logging
 import time
 import datetime
+from copy import deepcopy
+from util import to_numpy
+
 
 # logging
 logger = log = logging.getLogger(__name__)
@@ -56,8 +61,8 @@ log.info('%s logger started.', __name__)
 import os
 os.sys.path.append(os.path.abspath('.'))
 os.sys.path.append(os.path.abspath('DeepRL'))
-get_ipython().run_line_magic('reload_ext', 'autoreload')
-get_ipython().run_line_magic('autoreload', '2')
+# get_ipython().run_line_magic('reload_ext', 'autoreload')
+# get_ipython().run_line_magic('autoreload', '2')
 
 
 # %%
@@ -238,6 +243,81 @@ from DeepRL.utils.normalizer import Normalizer
 
 null_normaliser = lambda x:x
 
+# USE_CUDA = torch.cuda.is_available()
+# if USE_CUDA:
+#     print("using CUDA")
+#     FloatTensor = torch.cuda.FloatTensor
+# else:
+#     print("using CPU")
+#     FloatTensor = torch.FloatTensor
+
+
+
+def evaluate(actor, env, max_steps, memory=None, n_episodes=1, random=False, noise=None):
+    """
+    Computes the score of an actor on a given number of runs,
+    fills the memory if needed
+    """
+
+    if not random:
+        def policy(state):
+            
+            state = torch.FloatTensor(np.array([state])) #.reshape(-1))
+            # print("Action Shape: ", np.shape(state))
+            action = actor(state).cpu().data.numpy().flatten()
+
+            if noise is not None:
+                action += noise.sample()
+
+            max_action = int(env.action_space.high[0])
+            return np.clip(action, -max_action, max_action)
+
+    else:
+        def policy(state):
+            return env.action_space.sample()
+
+    scores = []
+    steps = 0
+
+    for _ in range(n_episodes):
+
+        score = 0
+        obs = deepcopy(env.reset())
+        #  experiences = self.replay.sample()
+        # states, actions, rewards, next_states, terminals = experiences
+        done = False
+
+        while not done:
+
+            # get next action and act
+            action = policy(obs)
+            n_obs, reward, done, _ = env.step(action)
+            done_bool = 0 if steps + \
+                1 == max_steps else float(done)
+            score += reward
+            steps += 1
+
+            # adding in memory
+            if memory is not None:
+                memory.feed((obs, action, reward, n_obs, done_bool))
+            obs = n_obs
+
+            # # render if needed
+            # if render:
+            #     env.render()
+
+            # reset when done
+            if done:
+                env.reset()
+
+        scores.append(score)
+
+    return np.mean(scores), steps
+
+
+
+
+
 class DDPGAgent:
     def __init__(self, config):
         self.config = config
@@ -251,9 +331,23 @@ class DDPGAgent:
         self.random_process = config.random_process_fn()
         self.criterion = nn.MSELoss()
         self.total_steps = 0
+        self.sigma_init = 1e-3
+        self.damp = 1e-3
+        self.damp_limit = 1e-5
+        self.pop_size = 10
+        self.elitism = 'elitism'
+        self.n_grad = 5
+        self.start_steps = 1000 #10000
+        self.n_episodes = 1
+        self.n_noisy = 0
 
         self.state_normalizer = Normalizer(self.task.state_dim) # null_normaliser # 
         self.reward_normalizer = Normalizer(1)
+
+        self.es = sepCEM(self.worker_network.actor.get_size(), mu_init=self.worker_network.actor.get_params(), 
+            sigma_init=self.sigma_init, damp=self.damp, damp_limit=self.damp_limit,
+            pop_size=self.pop_size, antithetic=not self.pop_size % 2, parents=self.pop_size // 2,
+            elitism=self.elitism)
 
     def soft_update(self, target, src):
         for target_param, param in zip(target.parameters(), src.parameters()):
@@ -271,86 +365,157 @@ class DDPGAgent:
 
         config = self.config
         actor = self.worker_network.actor
+        actor_t = self.worker_network.actor
         critic = self.worker_network.critic
-        target_actor = self.target_network.actor
-        target_critic = self.target_network.critic
+        critic_t = self.worker_network.critic
+        # target_actor = self.target_network.actor
+        # target_critic = self.target_network.critic
 
-        steps = 0
-        total_reward = 0.0
+        # Initialize our fitness and evolutionary params
+       
+        # fitness_ = []
+
+        step_cpt = 0
+        actor_steps = 0
+        #total_reward = 0.0
         while True:
-            actor.eval()
-            action = actor.predict(np.stack([state])).flatten()
-            if not deterministic:
-                action += self.random_process.sample()
-            next_state, reward, done, info = self.task.step(action)
-            if video_recorder is not None:
-                video_recorder.capture_frame()
-            done = (done or (config.max_episode_length and steps >= config.max_episode_length))
-            next_state = self.state_normalizer(next_state) * config.reward_scaling
-            total_reward += reward
-            
-            # tensorboard logging
-            prefix = 'test_' if deterministic else ''
-            log_value(prefix + 'reward', reward, self.total_steps)
-#             log_value(prefix + 'action', action, steps)
-            log_value('memory_size', self.replay.size(), self.total_steps)     
-            for key in info:
-                log_value(key, info[key], self.total_steps)     
-            
-            reward = self.reward_normalizer(reward)
 
-            if not deterministic:
-                self.replay.feed([state, action, reward, next_state, int(done)])
-                self.total_steps += 1
+            fitness = []
+            es_params = self.es.ask(self.pop_size)
 
-            steps += 1
-            state = next_state
+            # udpate the rl actors and the critic
+            if self.total_steps > self.start_steps:
+
+                for i in range(self.n_grad):
+
+                    # set params
+                    actor.set_params(es_params[i])
+                    actor_t.set_params(es_params[i])
+                    actor.optimizer = self.actor_opt
+
+                    # critic update
+                    for _ in range(actor_steps // self.n_grad):
+                        critic.update(self.replay, actor, critic_t)
+
+                    # actor update
+                    for _ in range(actor_steps):
+                        actor.update(self.replay, critic, actor_t)
+
+                    # get the params back in the population
+                    es_params[i] = actor.get_params()   
+            actor_steps = 0
+
+            # evaluate noisy actor(s)
+            for i in range(self.n_noisy):
+                actor.set_params(es_params[i])
+                f, steps = evaluate(actor, self.task, self.config.max_episode_length, 
+                                    memory=self.replay, n_episodes=self.n_episodes, noise=self.random_process)
+                actor_steps += steps
+                #print('Noisy actor {} fitness:{}'.format(i, f))
+
+            # evaluate all actors
+            for params in es_params:
+
+                actor.set_params(params)
+                f, steps = evaluate(actor, self.task, self.config.max_episode_length, 
+                                    memory=self.replay, n_episodes=self.n_episodes)
+                actor_steps += steps
+                fitness.append(f)
+
+                # print scores
+                #print('Actor fitness: {}'.format(f))
+
+            # update es
+            self.es.tell(es_params, fitness)
+
+            # update step counts
+            # self.total_steps += actor_steps
+            step_cpt += actor_steps
+
+
+            # actor.eval()
+            # action = actor.predict(np.stack([state])).flatten()
+            # if not deterministic:
+            #     action += self.random_process.sample()
+            # next_state, reward, done, info = self.task.step(action)
+            # if video_recorder is not None:
+            #     video_recorder.capture_frame()
+            # print("Done before done:", done)
+            done = config.max_episode_length and self.total_steps >= config.max_episode_length
+            # next_state = self.state_normalizer(next_state) * config.reward_scaling
+            # total_reward += reward
+            
+#             # tensorboard logging
+#             prefix = 'test_' if deterministic else ''
+#             log_value(prefix + 'reward', reward, self.total_steps)
+# #             log_value(prefix + 'action', action, steps)
+#             log_value('memory_size', self.replay.size(), self.total_steps)     
+#             for key in info:
+#                 log_value(key, info[key], self.total_steps)     
+            
+            # reward = self.reward_normalizer(reward)
+
+            # if not deterministic:
+            #     self.replay.feed([state, action, reward, next_state, int(done)])
+            #     self.total_steps += 1
+
+            if self.total_steps % 10 == 0:
+                print("Total Steps:", self.total_steps, " Average fitness:", np.mean(fitness))
+            self.total_steps += 1
+            # state = next_state
 
             if done:
+                # print("max_ep_length:", config.max_epsiode_length)
+                # print("total_steps:", self.total_steps)
                 break
+            
+        return np.mean(fitness), step_cpt 
 
-            if not deterministic and self.replay.size() >= config.min_memory_size:
-                self.worker_network.train()
-                experiences = self.replay.sample()
-                states, actions, rewards, next_states, terminals = experiences
-                q_next = target_critic.predict(next_states, target_actor.predict(next_states))
-                terminals = critic.to_torch_variable(terminals).unsqueeze(1)
-                rewards = critic.to_torch_variable(rewards).unsqueeze(1)
-                q_next = config.discount * q_next * (1 - terminals)
-                q_next.add_(rewards)
-                q_next = q_next.detach()
-                q = critic.predict(states, actions)
-                critic_loss = self.criterion(q, q_next)
 
-                critic.zero_grad()
-                self.critic_opt.zero_grad()
-                critic_loss.backward()
-                if config.gradient_clip:
-                    grad_critic = nn.utils.clip_grad_norm(self.worker_network.parameters(), config.gradient_clip)
-                self.critic_opt.step()
+            # TODO Check what we might need from this
+            # if not deterministic and self.replay.size() >= config.min_memory_size:
+            #     self.worker_network.train()
+            #     experiences = self.replay.sample()
+            #     states, actions, rewards, next_states, terminals = experiences
+            #     q_next = target_critic.predict(next_states, target_actor.predict(next_states))
+            #     terminals = critic.to_torch_variable(terminals).unsqueeze(1)
+            #     rewards = critic.to_torch_variable(rewards).unsqueeze(1)
+            #     q_next = config.discount * q_next * (1 - terminals)
+            #     q_next.add_(rewards)
+            #     q_next = q_next.detach()
+            #     q = critic.predict(states, actions)
+            #     critic_loss = self.criterion(q, q_next)
 
-                actions = actor.predict(states, False)
-                var_actions = Variable(actions.data, requires_grad=True)
-                q = critic.predict(states, var_actions)
-                q.backward(torch.ones(q.size()))
+                #
+                # critic.zero_grad()
+                # self.critic_opt.zero_grad()
+                # critic_loss.backward()
+                # if config.gradient_clip:
+                #     grad_critic = nn.utils.clip_grad_norm(self.worker_network.parameters(), config.gradient_clip)
+                # self.critic_opt.step()
 
-                actor.zero_grad()
-                self.actor_opt.zero_grad()
-                actions.backward(-var_actions.grad.data)
-                if config.gradient_clip:
-                    grad_actor = nn.utils.clip_grad_norm(self.worker_network.parameters(), config.gradient_clip)
-                self.actor_opt.step()
+                # actions = actor.predict(states, False)
+                # var_actions = Variable(actions.data, requires_grad=True)
+                # q = critic.predict(states, var_actions)
+                # q.backward(torch.ones(q.size()))
+
+                # actor.zero_grad()
+                # self.actor_opt.zero_grad()
+                # actions.backward(-var_actions.grad.data)
+                # if config.gradient_clip:
+                #     grad_actor = nn.utils.clip_grad_norm(self.worker_network.parameters(), config.gradient_clip)
+                # self.actor_opt.step()
                 
                 # tensorboard logging
-                log_value('critic_loss', critic_loss.cpu().data.numpy().squeeze(), self.total_steps)
-                log_value('loss_action', -q.sum(), self.total_steps)
-                if config.gradient_clip:
-                    log_value('grad_critic', grad_critic, self.total_steps)
-                    log_value('grad_actor', grad_actor, self.total_steps)
+                # log_value('critic_loss', critic_loss.cpu().data.numpy().squeeze(), self.total_steps)
+                # log_value('loss_action', -q.sum(), self.total_steps)
+                # if config.gradient_clip:
+                #     log_value('grad_critic', grad_critic, self.total_steps)
+                #     log_value('grad_actor', grad_actor, self.total_steps)
 
-                self.soft_update(self.target_network, self.worker_network)
+                # self.soft_update(self.target_network, self.worker_network)
 
-        return total_reward, steps
+         #total_reward
 
 
 # %%
@@ -405,10 +570,11 @@ class DeterministicActorNet(nn.Module, BasicNet):
         self.batch_norm = batch_norm
         BasicNet.__init__(self, None, gpu, False)
 
+        self.tau = 0.005
 
     def forward(self, x):
         x = self.to_torch_variable(x)
-        
+        # print("shape of x: ", np.shape(x))
         w0 = x[:,:1,:1,:] # weights from last step 
         x = x[:,:,1:,:]
         
@@ -433,11 +599,65 @@ class DeterministicActorNet(nn.Module, BasicNet):
             action = self.action_scale * self.action_gate(action)
         return action
 
+    def update(self, memory, critic, actor_t):
+
+            # Sample replay buffer
+            states, _, _, _, _ = memory.sample()
+
+            # Compute actor loss
+            actor_loss = -critic(states, self(states)).mean()
+
+            # Optimize the actor
+            self.optimizer.zero_grad()
+            actor_loss.backward()
+            self.optimizer.step()
+
+            # Update the frozen target models
+            for param, target_param in zip(self.parameters(), actor_t.parameters()):
+                target_param.data.copy_(
+                    self.tau * param.data + (1 - self.tau) * target_param.data)
+
     def predict(self, x, to_numpy=True):
         y = self.forward(x)
         if to_numpy:
             y = y.cpu().data.numpy()
         return y
+
+    def set_params(self, params):
+        """
+        Set the params of the network to the given parameters
+        """
+        cpt = 0
+        for param in self.parameters():
+            tmp = np.product(param.size())
+
+            if torch.cuda.is_available():
+                param.data.copy_(torch.from_numpy(
+                    params[cpt:cpt + tmp]).view(param.size()).cuda())
+            else:
+                param.data.copy_(torch.from_numpy(
+                    params[cpt:cpt + tmp]).view(param.size()))
+            cpt += tmp
+
+    def get_params(self):
+        """
+        Returns parameters of the actor
+        """
+        return deepcopy(np.hstack([to_numpy(v).flatten() for v in
+                                   self.parameters()]))
+
+    def get_grads(self):
+        """
+        Returns the current gradient
+        """
+        return deepcopy(np.hstack([to_numpy(v.grad).flatten() for v in self.parameters()]))
+
+    def get_size(self):
+        """
+        Returns the number of parameters of the network
+        """
+        return self.get_params().shape[0]
+
 
 class DeterministicCriticNet(nn.Module, BasicNet):
     def __init__(self,
@@ -445,7 +665,8 @@ class DeterministicCriticNet(nn.Module, BasicNet):
                  action_dim,
                  gpu=False,
                  batch_norm=False,
-                 non_linear=F.relu):
+                 non_linear=F.relu,
+                 discount=0.99):
         super(DeterministicCriticNet, self).__init__()
         stride_time = state_dim[1] - 1 - 2 #
         self.features = features = task.state_dim[0]
@@ -456,6 +677,10 @@ class DeterministicCriticNet(nn.Module, BasicNet):
         self.conv2 = nn.Conv2d(h0, h1, (stride_time, 1), stride=(stride_time, 1))
         self.layer3 = nn.Linear((h1+2)*actions, 1)
         self.non_linear = non_linear
+        self.discount = discount
+        self.tau = 0.005
+        #self.config = config
+        self.optimizer = config.critic_optimizer_fn(self.parameters())
 
         if batch_norm:
             self.bn1 = nn.BatchNorm1d(h0)
@@ -483,6 +708,53 @@ class DeterministicCriticNet(nn.Module, BasicNet):
         batch_size = x.size()[0]
         action = self.layer3(h.view((batch_size,-1)))
         return action
+
+    def update(self, memory, actor_t, critic_t):
+
+            # Sample replay buffer
+            states, actions, rewards, n_states, dones = memory.sample()
+
+            # Q target = reward + discount * Q(next_state, pi(next_state))
+            with torch.no_grad():
+                target_Q = critic_t(n_states, actor_t(n_states))
+                # print("original shape target_Q: ", np.shape(target_Q))
+                target_Q = target_Q * (1 - np.array([dones],dtype=np.float).reshape([64,1])) * np.array([self.discount],dtype=np.float) + np.array([rewards],dtype=np.float).reshape([64,1])
+                # print(target_Q.type())
+            # print("dones: ", type(dones))
+            # print("n_states:", type(n_states))
+            # print("actions: ", type(actions))
+            # print("states: ", type(states))
+            # print("rewards: ", type(rewards))
+            # print("target_Q: ", type(target_Q))
+            # print()
+            # print("shape dones: ", np.shape(dones))
+            # print("shape n_states:", np.shape(n_states))
+            # print("shape actions: ", np.shape(actions))
+            # print("shape states: ", np.shape(states))
+            # print("shape rewards: ", np.shape(rewards))
+            # print("shape target_Q: ", np.shape(target_Q))
+            # print()
+            # Get current Q estimates
+            current_Q = self(states, actions)
+            # print(current_Q.type())
+
+            # print("currentQ: ", current_Q)
+
+
+
+            # Compute critic loss
+            critic_loss = nn.MSELoss()(current_Q, target_Q.float())
+
+            # Optimize the critic
+            self.optimizer.zero_grad()
+            critic_loss.backward()
+            self.optimizer.step()
+
+            # Update the frozen target models
+            for param, target_param in zip(self.parameters(), critic_t.parameters()):
+                target_param.data.copy_(
+                    self.tau * param.data + (1 - self.tau) * target_param.data)
+
 
     def predict(self, x, action):
         return self.forward(x, action)
@@ -515,12 +787,19 @@ config.discount = 0.0
 
 config.min_memory_size = 50
 config.target_network_mix = 0.001
-config.max_steps = 300000
-config.max_episode_length = 3000 
+config.max_episode_length = 3000  
 config.target_network_mix = 0.01
 config.noise_decay_interval = 100000
 config.gradient_clip = 20
 config.min_epsilon = 0.1
+
+
+# sigma_init = 1e-3
+# damp = 1e-3
+# damp_limit = 1e-5
+# pop_size = 10
+# elitism = 'elitism'
+
 
 # Many papers have found rewards scaling to be an important parameter. But while they focus on the scaling factor
 # I think they should focus on the end variance with a range of 200-400. e.g. https://arxiv.org/pdf/1709.06560.pdf
@@ -534,8 +813,14 @@ config.test_repetitions = 1
 config.save_interval = 4 # TODO: Remove (quick test)
 config.logger = Logger('./log', gym.logger)
 config.tag = tag
+
+
 agent = DDPGAgent(config)
 agent
+
+# es = sepCEM(agent.worker_network.actor.get_size(), mu_init=agent.worker_network.actor.get_params(), sigma_init=sigma_init, damp=damp, damp_limit=damp_limit,
+#             pop_size=pop_size, antithetic=not pop_size % 2, parents=pop_size // 2, elitism=elitism)
+
 
 
 # %%
@@ -704,14 +989,5 @@ df=df[cols]
 df.plot(alpha=0.5)
 
 
-# %%
-
-
-
-# %%
-
-
-
-# %%
 
 
