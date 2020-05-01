@@ -289,7 +289,7 @@ class PortfolioEnv(gym.Env):
 
         self.observation_space = gym.spaces.Dict({
             'history': gym.spaces.Box(
-                -10,
+            s    -10,
                 20 if scale else 1,  # if scale=True observed price changes return could be large fractions
                 obs_shape
             ),

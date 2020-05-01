@@ -1,0 +1,1 @@
+Step,Average Fitness11,2.393442610495688Step,Average Fitness501,-1.271213269302831

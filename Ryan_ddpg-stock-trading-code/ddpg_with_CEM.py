@@ -29,7 +29,7 @@ from ES import sepCEM, Control
 
 # %%
 # plotting
-# get_ipython().run_line_magic('matplotlib', 'notebook')
+get_ipython().run_line_magic('matplotlib', 'notebook')
 from matplotlib import pyplot as plt
 import seaborn as sns
 plt.style.use('ggplot')
@@ -61,8 +61,8 @@ log.info('%s logger started.', __name__)
 import os
 os.sys.path.append(os.path.abspath('.'))
 os.sys.path.append(os.path.abspath('DeepRL'))
-# get_ipython().run_line_magic('reload_ext', 'autoreload')
-# get_ipython().run_line_magic('autoreload', '2')
+get_ipython().run_line_magic('reload_ext', 'autoreload')
+get_ipython().run_line_magic('autoreload', '2')
 
 
 # %%
@@ -253,7 +253,7 @@ null_normaliser = lambda x:x
 
 
 
-def evaluate(actor, env, max_steps, memory=None, n_episodes=1, random=False, noise=None):
+def evaluate(actor, env, max_steps, memory=None, n_episodes=1, random=False, noise=None, deterministic=False):
     """
     Computes the score of an actor on a given number of runs,
     fills the memory if needed
@@ -263,7 +263,7 @@ def evaluate(actor, env, max_steps, memory=None, n_episodes=1, random=False, noi
         def policy(state):
             
             state = torch.FloatTensor(np.array([state])) #.reshape(-1))
-            # print("Action Shape: ", np.shape(state))
+            #print("Action Shape: ", np.shape(state))
             action = actor(state).cpu().data.numpy().flatten()
 
             if noise is not None:
@@ -287,16 +287,33 @@ def evaluate(actor, env, max_steps, memory=None, n_episodes=1, random=False, noi
         # states, actions, rewards, next_states, terminals = experiences
         done = False
 
+        obs_l = []
+        rewards = []
+        dones = []
+        s = []
+
         while not done:
 
             # get next action and act
             action = policy(obs)
             n_obs, reward, done, _ = env.step(action)
-            done_bool = 0 if steps + \
-                1 == max_steps else float(done)
+            done_bool = 0 if steps + 1 == max_steps else float(done)
             score += reward
             steps += 1
 
+            if deterministic:
+                obs_l.append(n_obs)
+                rewards.append(reward)
+                dones.append(done)
+                s.append(steps)
+                
+
+                # filewriter = open("test_fitness.csv", "a")
+                # filewriter.write("Step,Average Fitness")
+                # filewriter.write(str(self.total_steps) + "," + 
+                #                 str(np.mean(fitness)) + "," +
+                #                 )
+                # filewriter.close()
             # adding in memory
             if memory is not None:
                 memory.feed((obs, action, reward, n_obs, done_bool))
@@ -309,6 +326,15 @@ def evaluate(actor, env, max_steps, memory=None, n_episodes=1, random=False, noi
             # reset when done
             if done:
                 env.reset()
+
+        if deterministic:
+            df = pd.DataFrame({
+                'steps':s,
+                # 'observation':obs_l,
+                'reward':rewards,
+                'done':dones
+            })
+            df.to_csv('ddpg_cem_test_results.csv')
 
         scores.append(score)
 
@@ -382,43 +408,47 @@ class DDPGAgent:
 
             fitness = []
             es_params = self.es.ask(self.pop_size)
-
-            # udpate the rl actors and the critic
-            if self.total_steps > self.start_steps:
-
-                for i in range(self.n_grad):
-
-                    # set params
-                    actor.set_params(es_params[i])
-                    actor_t.set_params(es_params[i])
-                    actor.optimizer = self.actor_opt
-
-                    # critic update
-                    for _ in range(actor_steps // self.n_grad):
-                        critic.update(self.replay, actor, critic_t)
-
-                    # actor update
-                    for _ in range(actor_steps):
-                        actor.update(self.replay, critic, actor_t)
-
-                    # get the params back in the population
-                    es_params[i] = actor.get_params()   
             actor_steps = 0
 
-            # evaluate noisy actor(s)
-            for i in range(self.n_noisy):
-                actor.set_params(es_params[i])
-                f, steps = evaluate(actor, self.task, self.config.max_episode_length, 
-                                    memory=self.replay, n_episodes=self.n_episodes, noise=self.random_process)
-                actor_steps += steps
-                #print('Noisy actor {} fitness:{}'.format(i, f))
+
+            if not deterministic:
+                # udpate the rl actors and the critic
+                if self.total_steps > self.start_steps:
+
+                    for i in range(self.n_grad):
+
+                        # set params
+                        actor.set_params(es_params[i])
+                        actor_t.set_params(es_params[i])
+                        actor.optimizer = self.actor_opt
+
+                        # critic update
+                        for _ in range(actor_steps // self.n_grad):
+                            critic.update(self.replay, actor, critic_t)
+
+                        # actor update
+                        for _ in range(actor_steps):
+                            actor.update(self.replay, critic, actor_t)
+
+                        # get the params back in the population
+                        es_params[i] = actor.get_params()   
+
+                # evaluate noisy actor(s)
+                for i in range(self.n_noisy):
+                    actor.set_params(es_params[i])
+                    f, steps = evaluate(actor, self.task, self.config.max_episode_length, 
+                                        memory=self.replay, n_episodes=self.n_episodes,
+                                         noise=self.random_process, deterministic=deterministic)
+                    actor_steps += steps
+                    #print('Noisy actor {} fitness:{}'.format(i, f))
 
             # evaluate all actors
             for params in es_params:
 
                 actor.set_params(params)
                 f, steps = evaluate(actor, self.task, self.config.max_episode_length, 
-                                    memory=self.replay, n_episodes=self.n_episodes)
+                                    memory=self.replay, n_episodes=self.n_episodes, 
+                                    noise=None, deterministic=deterministic)
                 actor_steps += steps
                 fitness.append(f)
 
@@ -426,7 +456,8 @@ class DDPGAgent:
                 #print('Actor fitness: {}'.format(f))
 
             # update es
-            self.es.tell(es_params, fitness)
+            if not deterministic:
+                self.es.tell(es_params, fitness)
 
             # update step counts
             # self.total_steps += actor_steps
@@ -464,11 +495,10 @@ class DDPGAgent:
             self.total_steps += 1
             # state = next_state
 
-            if done:
+            if done or deterministic:
                 # print("max_ep_length:", config.max_epsiode_length)
                 # print("total_steps:", self.total_steps)
                 break
-            
         return np.mean(fitness), step_cpt 
 
 
@@ -787,7 +817,7 @@ config.discount = 0.0
 
 config.min_memory_size = 50
 config.target_network_mix = 0.001
-config.max_episode_length = 3000  
+config.max_episode_length = 500  
 config.target_network_mix = 0.01
 config.noise_decay_interval = 100000
 config.gradient_clip = 20
@@ -847,18 +877,18 @@ except KeyboardInterrupt as e:
 
 # %%
 # plot rewards
-plt.figure()
-df_online, df = load_stats_ddpg(agent)
-sns.regplot(x="step", y="rewards", data=df_online, order=1)
+# plt.figure()
+# df_online, df = load_stats_ddpg(agent)
+# sns.regplot(x="step", y="rewards", data=df_online, order=1)
 
 
-# %%
-# monthly growth
-portfolio_return = (1+df_online.rewards[-100:].mean())
+# # %%
+# # monthly growth
+# portfolio_return = (1+df_online.rewards[-100:].mean())
 
-returns = task.unwrapped.src.data[0,:,:1]
-market_return = (1+returns).mean()
-market_return, portfolio_return
+# returns = task.unwrapped.src.data[0,:,:1]
+# market_return = (1+returns).mean()
+# market_return, portfolio_return
 
 
 # %%
@@ -924,7 +954,7 @@ def test_algo(env, algo, seed=0):
 # %%
 # use test env
 df_test = pd.read_hdf('./data/poloniex_30m.hf',key='test')
-test_steps=5000
+test_steps=500 #5000
 env_test = task_fn_test()
 agent.task = env_test
 agent.config.max_episode_length = test_steps
@@ -933,19 +963,19 @@ np.random.seed(0)
 
 # run in deterministic mode, no training, no exploration
 agent.episode(True)
-agent.task.render('notebook')
-agent.task.render('notebook', True)
+# agent.task.render('notebook')
+# agent.task.render('notebook', True)
 
-df = pd.DataFrame(agent.task.unwrapped.infos)
-df.index = pd.to_datetime(df['date']*1e9)
-
-
-# %%
-
+# df = pd.DataFrame(agent.task.unwrapped.infos)
+# df.index = pd.to_datetime(df['date']*1e9)
 
 
 # %%
+df = pd.read_csv('ddpg_cem_test_results.csv')
+df
 
+# %%
+len(df_test)
 
 
 # %%
@@ -991,3 +1021,6 @@ df.plot(alpha=0.5)
 
 
 
+
+
+# %%
