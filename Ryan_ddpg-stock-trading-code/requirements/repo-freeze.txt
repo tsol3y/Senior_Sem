@@ -34,7 +34,7 @@ click-plugins==1.0.3
 cligj==0.4.0
 cntk==2.2
 coverage==4.4.1
-cvxopt==1.1.9
+cvxopt==1.2.7
 cycler==0.10.0
 Cython==0.26.1
 decorator==4.1.2
