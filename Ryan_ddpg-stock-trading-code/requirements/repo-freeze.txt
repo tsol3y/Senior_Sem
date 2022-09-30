@@ -56,7 +56,7 @@ ipywidgets==6.0.0
 jedi==0.10.2
 Jinja2==2.9.6
 jmespath==0.9.3
-joblib==0.11
+joblib==1.2.0
 jsonschema==2.6.0
 jupyter==1.0.0
 jupyter-client==5.1.0
